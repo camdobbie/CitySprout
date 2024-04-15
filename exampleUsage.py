@@ -20,6 +20,7 @@ maps.plotCityBlackWithAlphaShape(city1, alpha = 20)
 """
 
 
+
 """
 # Pickling some shortest path data and road betweenness data:
 city1 = cityGen.loadCity("exampleCity.pkl")
@@ -27,6 +28,16 @@ shortestPathsSavePath = "shortestPaths.pkl"
 betweennessSavePath = "betweenness.pkl"
 metrics.calculateRoadBetweennessCentrality(city1, shortestPathsSavePath, betweennessSavePath)
 """
+
+
+
+"""
+# Plotting a road betweenness centrality heatmap:
+city1 = cityGen.loadCity("exampleCity.pkl")
+betweennessLoadPath = "betweenness.pkl"
+maps.plotRoadsByClusteredBetweennessCentrality(city1, betweennessLoadPath, baseWidth=2)
+"""
+
 
 
 """
