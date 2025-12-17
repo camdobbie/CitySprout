@@ -5,7 +5,7 @@ import generateMaps as maps
 
 
 
-cities_per_grammar = 1
+cities_per_grammar = 100
 population_goal = 500000
 
 
@@ -29,10 +29,13 @@ for seed in range(cities_per_grammar):
             grammar=grammar,
             seed=seed,
             intersectRadius=0.8,
-            plotType="Map"
+            plotType="none"
         )
         cityGen.saveCity(
             city,
             f"cities/{grammar_str}_seed_{seed}_pop_{population_goal}.pkl"
         )
-
+        # Calc shortest path and betweenness centrality
+        shortestPathsSavePath = f"cities/shortestPaths_{grammar_str}_seed_{seed}_pop_{population_goal}.pkl"
+        betweennessSavePath = f"cities/betweenness_{grammar_str}_seed_{seed}_pop_{population_goal}.pkl"
+        metrics.calculateRoadBetweennessCentrality(city, shortestPathsSavePath, betweennessSavePath)

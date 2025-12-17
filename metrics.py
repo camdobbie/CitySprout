@@ -234,7 +234,7 @@ def alpha_shape(G, alpha=20):
 
     coords = np.array([point.coords[0] for point in points])
     tri = Delaunay(coords)
-    triangles = coords[tri.vertices]
+    triangles = coords[tri.simplices]
     # calculate a,b,c, which are the side lengths of the triangles
     a = ((triangles[:,0,0] - triangles[:,1,0]) ** 2 + (triangles[:,0,1] - triangles[:,1,1]) ** 2) ** 0.5
     b = ((triangles[:,1,0] - triangles[:,2,0]) ** 2 + (triangles[:,1,1] - triangles[:,2,1]) ** 2) ** 0.5
