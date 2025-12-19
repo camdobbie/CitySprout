@@ -180,7 +180,7 @@ class CityGenerator:
                 self.roadNumbers.append(newRoadNumber)
 
     def generateCity(self, iterations, grammar, seed=42, intersectRadius=0.8, maxWidth = None, maxHeight = None, plotType="Map", showNodes=False,
-                     nodeLabelType=None, edgeLabelType=None, complexityPath=None, maxRoadSegments = None, maxRoadLength=None, population = None, plotColour = "Default", animationSavePath=None, plotXLimits=None, plotYLimits=None, figSize=None):
+                     nodeLabelType=None, edgeLabelType=None, complexityPath=None, maxRoadSegments = None, maxRoadLength=None, population = None, plotColour = "Default", animationSavePath=None, plotXLimits=None, plotYLimits=None, figSize=None, verbose = False):
 
         random.seed(seed)
         np.random.seed(seed)
@@ -356,12 +356,14 @@ class CityGenerator:
         def update(i):
             print(f"Starting iteration: {i+1}/{iterations}")
 
-            if maxRoadSegments:
-                print(f"Road segments: {self.G.number_of_edges()}")
-            if maxRoadLength:
-                print(f"Road length: {optim.calculateTotalRoadLength(self.G)}")
-            if population:
-                print(f"Population: {optim.calculatePopulation(self.G)}")
+            if verbose:
+
+                if maxRoadSegments:
+                    print(f"Road segments: {self.G.number_of_edges()}")
+                if maxRoadLength:
+                    print(f"Road length: {optim.calculateTotalRoadLength(self.G)}")
+                if population:
+                    print(f"Population: {optim.calculatePopulation(self.G)}")
 
             ax.clear()
 
@@ -408,12 +410,13 @@ class CityGenerator:
             for i in range(iterations):
                 print(f"Starting iteration: {i+1}/{iterations}")
 
-                if maxRoadSegments:
-                    print(f"Road segments: {self.G.number_of_edges()}")
-                if maxRoadLength:
-                    print(f"Road length: {optim.calculateTotalRoadLength(self.G)}")
-                if population:
-                    print(f"Population: {optim.calculatePopulation(self.G)}")
+                if verbose:
+                    if maxRoadSegments:
+                        print(f"Road segments: {self.G.number_of_edges()}")
+                    if maxRoadLength:
+                        print(f"Road length: {optim.calculateTotalRoadLength(self.G)}")
+                    if population:
+                        print(f"Population: {optim.calculatePopulation(self.G)}")
 
                 applyLSystem()
 
