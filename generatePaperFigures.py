@@ -10,6 +10,7 @@ class FigureGenerator():
             "Hex"       :   "#ffd937",
             "Line"      :   "#5a9fcb",
         }
+
         # Keep the desired order of grammars
         self.grammar_order = list(self.grammar_colours.keys())
 
@@ -35,11 +36,44 @@ class FigureGenerator():
         df = pd.read_csv(path, header=None, names = ["grammar","population","seed", "value"])
         return df
 
+    def plot_beta_sensitivity(self, save_path=None, show=True, csv_file=""):
+        df = pd.read_csv(csv_file)
+        data = []
+        for beta in df["beta"].unique():
+            for seed in df["seed"].unique():
+                row_sum = df[(df["beta"]==beta)&(df["seed"]==seed)]["living_metric"].sum().item()
+                for grammar in df["grammar"].unique():
+                    val = df[(df["beta"]==beta)&(df["seed"]==seed)&(df["grammar"]==grammar)]["living_metric"].sum().item()
+                    data.append({"beta": beta, "grammar": grammar, "seed": seed, "living_metric": val/row_sum})
+
+        df2 = pd.DataFrame(data)
+        print(df2)
+        plt.figure(figsize=(6,4))
+        g = sns.lineplot(
+            data=df2,
+            x="beta",
+            y="living_metric",
+            hue="grammar",
+            style="grammar",
+            palette=self.grammar_colours,   
+        )
+        g.set_xticks(range(20))
+        plt.xlabel("Beta")
+        plt.ylabel("Normalised Living Metric")
+        plt.title("Normalised Living metric vs Beta")
+        plt.legend(title="Grammar", loc="upper right")
+        plt.tight_layout()
+        if save_path:
+            plt.savefig(save_path)
+        if show:
+            plt.show()
+
+
     def plot_scatter(self, save_path=None, show=True):
-        circuity_df = self.load_data("mean_circuity.csv")
+        circuity_df = self.load_data(self.metrics["mean_circuity"]["data_path"])
         circuity_df = circuity_df.rename(columns = {"value":"mean_circuity"})
 
-        road_density_df = self.load_data("road_density.csv")
+        road_density_df = self.load_data(self.metrics["road_density"]["data_path"])
         road_density_df = road_density_df.rename(columns = {"value":"road_density"})
 
         merged_df = circuity_df.merge(
@@ -47,6 +81,8 @@ class FigureGenerator():
             on=["grammar", "seed", "population"],
             how="inner"
         )
+
+        print(merged_df)
 
         plt.figure(figsize=(6,4))
         sns.scatterplot(
@@ -60,11 +96,12 @@ class FigureGenerator():
             s=100,
             edgecolors="black"
         )
+        plt.xlim(0, 5)
         
         plt.xlabel("Road Density")
         plt.ylabel("Mean Circuity")
         plt.title("Road Density vs Mean Circuity by Grammar")
-        plt.legend(title="Grammar", loc="upper left")
+        plt.legend(title="Grammar", loc="upper right")
         plt.gca().invert_yaxis()
 
         plt.tight_layout()
@@ -80,7 +117,6 @@ class FigureGenerator():
         df = df.rename(columns={"value": metric})
 
         plt.figure(figsize=(3,6))
-
 
         # Violin plot
         sns.violinplot(
@@ -119,11 +155,11 @@ class FigureGenerator():
 
         plt.tight_layout()
 
-        if show:
-            plt.show()
-
         if save_path:
             plt.savefig(save_path)
+
+        if show:
+            plt.show()
 
     def plot_metric_heatmap(self, show=True, save_path=None):
         # Compute median of each metric per grammar
@@ -157,7 +193,7 @@ class FigureGenerator():
         sns.heatmap(
             normed,
             annot=heatmap_df.round(4),
-            fmt="",
+            fmt=".2",
             cmap="RdYlGn",
             cbar=False,
             linewidths=2,
@@ -183,12 +219,12 @@ class FigureGenerator():
             fig.savefig(save_path)
 
 
-fig_gen = FigureGenerator()
+if __name__=="__main__":
+    fig_gen = FigureGenerator()
 
-fig_gen.plot_scatter(show=False, save_path = "road_density_vs_mean_circuity_scatter.pdf")
-
-fig_gen.plot_metric_heatmap(show=False, save_path="results_table_heatmap.pdf")
-
-fig_gen.plot_violins("road_density", show=False, save_path = "road_density_violins.pdf")
-fig_gen.plot_violins("mean_circuity", show=False, save_path = "mean_circuity_violins.pdf")
-fig_gen.plot_violins("living_metric", show=False, save_path = "living_metric_violins.pdf")
+    # Generate figures based on CSV files
+    fig_gen.plot_scatter(show=True, save_path = "road_density_vs_mean_circuity_scatter.pdf")
+    fig_gen.plot_metric_heatmap(show=True, save_path="results_table_heatmap.pdf")
+    fig_gen.plot_violins("road_density", show=True, save_path = "road_density_violins.pdf")
+    fig_gen.plot_violins("mean_circuity", show=True, save_path = "mean_circuity_violins.pdf")
+    fig_gen.plot_violins("living_metric", show=True, save_path = "living_metric_violins.pdf")
