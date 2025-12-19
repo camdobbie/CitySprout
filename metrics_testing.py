@@ -60,15 +60,31 @@ def pathToRoads(G, path):
             prev_road = road
     return roads
 
+def pathToEdges(path):
+    return [(u, v) for u, v in zip(path[:-1], path[1:])]
+
+def getRoadRanks(roadBetweenness):
+    sorted_roads = sorted(roadBetweenness.items(),
+                           key=lambda x: x[1])
+    return {road: rank for rank, (road, _) in enumerate(sorted_roads)}
+
 def roadBetweennessSequence(roadSeq, roadBetweenness):
     """Return the betweenness values along a road sequence."""
     return [roadBetweenness[road] for road in roadSeq]
 
-def pathTau(roadSeq, roadBetweenness):
+def pathTauRoads(roadSeq, roadBetweenness):
     seq = [roadBetweenness[r] for r in roadSeq]
     if len(seq) < 2:
         return np.nan
     tau, _ = kendalltau(seq, range(len(seq)))
+    return tau
+
+def pathTauEdges(edgeSeq, edgeBetweenness):
+    seq = [edgeBetweenness[e] for e in edgeSeq]
+    if len(seq) < 2:
+        return np.nan
+
+    tau, _ = kendalltau(-np.array(seq), range(len(seq)))
     return tau
 
 def calculateRawEdgeBetweenness(shortestPaths):
@@ -113,7 +129,7 @@ def calculateRawEdgeBetweenness(shortestPaths):
 
 #     return livingMetricV2
 
-def calculateLivingMetricV2(G, shortestPaths, rawRoadBetweenness):
+def calculateLivingMetricKendallRoads(G, shortestPaths, rawRoadBetweenness):
 
     centrePaths = shortestPaths[0]
 
@@ -130,7 +146,7 @@ def calculateLivingMetricV2(G, shortestPaths, rawRoadBetweenness):
         if k < 2:
             continue
 
-        tau = pathTau(roadSeq, rawRoadBetweenness)
+        tau = pathTauRoads(roadSeq, rawRoadBetweenness)
 
         if not np.isnan(tau):
             taus.append(tau)
@@ -138,6 +154,31 @@ def calculateLivingMetricV2(G, shortestPaths, rawRoadBetweenness):
 
     livingMetricV2 = np.average(taus, weights=weights)
     return livingMetricV2
+
+def calculateLivingMetricKendallEdges(shortestPaths, rawEdgeBetweenness):
+
+    centrePaths = shortestPaths[0]
+
+    taus = []
+    weights = []
+
+    for target, path in tqdm(centrePaths.items(),
+                             desc="Calculating LivingMetricV2 (edge)"):
+        if target == 0:
+            continue
+
+        edgeSeq = pathToEdges(path)
+        k = len(edgeSeq)
+
+        if k < 2:
+            continue
+
+        tau = pathTauEdges(edgeSeq, rawEdgeBetweenness)
+        if not np.isnan(tau):
+            taus.append(tau)
+            weights.append(k)   # weight by number of edges
+
+    return np.average(taus, weights=weights)
 
 def calculateRawRoadBetweenness(G, rawEdgeBetweenness):
 
@@ -220,6 +261,67 @@ def normaliseRawRoadBetweenness(roadBetweenness, normalisedRoadBetweennessSavePa
     shortestPathsShelve.close()
     roadBetweenness.close()
  """
+
+def calculateRoadConnectionDict(G):
+    roadConnectionDict = {}
+    for roadNumber in nx.get_edge_attributes(G, 'roadNumber').values():
+        roadConnectionDict[roadNumber] = []
+    for node in G.nodes():
+        connectedRoads = set()
+        for edge in G.edges(node, data=True):
+            if 'roadNumber' in edge[2]:
+                connectedRoads.add(edge[2]['roadNumber'])
+        for roadNumber in connectedRoads:
+            # Exclude the road itself from its list of connected roads
+            roadConnectionDict[roadNumber].extend([connectedRoad for connectedRoad in connectedRoads if connectedRoad != roadNumber])
+    return roadConnectionDict
+
+def calculateLivingMetricScore(G, roadBetweenness, lambda_=10):
+
+    roadRanks = getRoadRanks(roadBetweenness)
+    roadConnections = calculateRoadConnectionDict(G)
+
+    scores = {}
+
+    for road, neighbours in roadConnections.items():
+        r_i = roadRanks[road]
+
+        score = 0.0
+        for nbr in neighbours:
+            r_j = roadRanks[nbr]
+            d = abs(r_i - r_j)
+            score += np.exp(-d / lambda_)
+
+        scores[road] = score
+
+    return np.mean(list(scores.values()))
+
+
+def calculateLivingMetricScoreNormalised(
+    G, roadBetweenness, lambda_=0.1
+):
+    roadRanks = getRoadRanks(roadBetweenness)
+    roadConnections = calculateRoadConnectionDict(G)
+
+    N = len(roadRanks)
+    scores = {}
+
+    for road, neighbours in roadConnections.items():
+        if not neighbours:
+            continue
+
+        r_i = roadRanks[road]
+        s = 0.0
+
+        for nbr in neighbours:
+            r_j = roadRanks[nbr]
+            d = abs(r_i - r_j) / (N - 1)   # normalised rank distance
+            s += np.exp(-d / lambda_)
+
+        scores[road] = s / len(neighbours)  # degree-normalised
+
+    return np.mean(list(scores.values()))
+
 def calculateAverageCircuity(G,shortestPathsLoadPath=None):
     #average circuity is defined as the mean of all circuity values for each pair of nodes in the graph.
     # for each pair of nodes, circuity is the shortest path length divided by the euclidean distance between the nodes
