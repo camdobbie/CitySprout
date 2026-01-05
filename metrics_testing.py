@@ -111,74 +111,56 @@ def calculateRawEdgeBetweenness(shortestPaths):
 
     return edgeBetweenness
 
-# def calculateLivingMetricV2(G, shortestPaths, rawRoadBetweenness):
+# def calculateLivingMetricKendallRoads(G, shortestPaths, rawRoadBetweenness):
 
 #     centrePaths = shortestPaths[0]
 
-
 #     taus = []
+#     weights = []
+
 #     for target, path in tqdm(centrePaths.items(), desc="Calculating LivingMetricV2 by road"):
 #         if target == 0:
 #             continue
+
 #         roadSeq = pathToRoads(G, path)
-#         tau = pathTau(roadSeq, rawRoadBetweenness)
+#         k = len(roadSeq)
+
+#         if k < 2:
+#             continue
+
+#         tau = pathTauRoads(roadSeq, rawRoadBetweenness)
+
 #         if not np.isnan(tau):
 #             taus.append(tau)
+#             weights.append(k)  # weight by number of roads
 
-#     livingMetricV2 = np.mean(taus)
-
+#     livingMetricV2 = np.average(taus, weights=weights)
 #     return livingMetricV2
 
-def calculateLivingMetricKendallRoads(G, shortestPaths, rawRoadBetweenness):
+# def calculateLivingMetricKendallEdges(shortestPaths, rawEdgeBetweenness):
 
-    centrePaths = shortestPaths[0]
+#     centrePaths = shortestPaths[0]
 
-    taus = []
-    weights = []
+#     taus = []
+#     weights = []
 
-    for target, path in tqdm(centrePaths.items(), desc="Calculating LivingMetricV2 by road"):
-        if target == 0:
-            continue
+#     for target, path in tqdm(centrePaths.items(),
+#                              desc="Calculating LivingMetricV2 (edge)"):
+#         if target == 0:
+#             continue
 
-        roadSeq = pathToRoads(G, path)
-        k = len(roadSeq)
+#         edgeSeq = pathToEdges(path)
+#         k = len(edgeSeq)
 
-        if k < 2:
-            continue
+#         if k < 2:
+#             continue
 
-        tau = pathTauRoads(roadSeq, rawRoadBetweenness)
+#         tau = pathTauEdges(edgeSeq, rawEdgeBetweenness)
+#         if not np.isnan(tau):
+#             taus.append(tau)
+#             weights.append(k)   # weight by number of edges
 
-        if not np.isnan(tau):
-            taus.append(tau)
-            weights.append(k)  # weight by number of roads
-
-    livingMetricV2 = np.average(taus, weights=weights)
-    return livingMetricV2
-
-def calculateLivingMetricKendallEdges(shortestPaths, rawEdgeBetweenness):
-
-    centrePaths = shortestPaths[0]
-
-    taus = []
-    weights = []
-
-    for target, path in tqdm(centrePaths.items(),
-                             desc="Calculating LivingMetricV2 (edge)"):
-        if target == 0:
-            continue
-
-        edgeSeq = pathToEdges(path)
-        k = len(edgeSeq)
-
-        if k < 2:
-            continue
-
-        tau = pathTauEdges(edgeSeq, rawEdgeBetweenness)
-        if not np.isnan(tau):
-            taus.append(tau)
-            weights.append(k)   # weight by number of edges
-
-    return np.average(taus, weights=weights)
+#     return np.average(taus, weights=weights)
 
 def calculateRawRoadBetweenness(G, rawEdgeBetweenness):
 
@@ -290,7 +272,7 @@ def calculateLivingMetricScore(G, roadBetweenness, lambda_=10):
         for nbr in neighbours:
             r_j = roadRanks[nbr]
             d = abs(r_i - r_j)
-            score += np.exp(-d / lambda_)
+            score += np.exp(-lambda_ * d)
 
         scores[road] = score
 
@@ -298,7 +280,7 @@ def calculateLivingMetricScore(G, roadBetweenness, lambda_=10):
 
 
 def calculateLivingMetricScoreNormalised(
-    G, roadBetweenness, lambda_=0.1
+    G, roadBetweenness, lambda_=1
 ):
     roadRanks = getRoadRanks(roadBetweenness)
     roadConnections = calculateRoadConnectionDict(G)
@@ -316,7 +298,7 @@ def calculateLivingMetricScoreNormalised(
         for nbr in neighbours:
             r_j = roadRanks[nbr]
             d = abs(r_i - r_j) / (N - 1)   # normalised rank distance
-            s += np.exp(-d / lambda_)
+            s += np.exp(-lambda_ * d)
 
         scores[road] = s / len(neighbours)  # degree-normalised
 
