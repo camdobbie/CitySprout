@@ -24,6 +24,7 @@ import pickle
 import shelve
 import numpy as np
 from scipy.stats import kendalltau
+import os
 
 def calculateShortestPaths(G, shortestPathsSavePath=None):
     # calculate the length of each edge and add it as a 'weight' attribute
@@ -63,10 +64,7 @@ def pathToRoads(G, path):
 def pathToEdges(path):
     return [(u, v) for u, v in zip(path[:-1], path[1:])]
 
-def getRoadRanks(roadBetweenness):
-    sorted_roads = sorted(roadBetweenness.items(),
-                           key=lambda x: x[1])
-    return {road: rank for rank, (road, _) in enumerate(sorted_roads)}
+
 
 def roadBetweennessSequence(roadSeq, roadBetweenness):
     """Return the betweenness values along a road sequence."""
@@ -244,19 +242,7 @@ def normaliseRawRoadBetweenness(roadBetweenness, normalisedRoadBetweennessSavePa
     roadBetweenness.close()
  """
 
-def calculateRoadConnectionDict(G):
-    roadConnectionDict = {}
-    for roadNumber in nx.get_edge_attributes(G, 'roadNumber').values():
-        roadConnectionDict[roadNumber] = []
-    for node in G.nodes():
-        connectedRoads = set()
-        for edge in G.edges(node, data=True):
-            if 'roadNumber' in edge[2]:
-                connectedRoads.add(edge[2]['roadNumber'])
-        for roadNumber in connectedRoads:
-            # Exclude the road itself from its list of connected roads
-            roadConnectionDict[roadNumber].extend([connectedRoad for connectedRoad in connectedRoads if connectedRoad != roadNumber])
-    return roadConnectionDict
+
 
 def calculateLivingMetricScore(G, roadBetweenness, lambda_=10):
 
@@ -277,6 +263,27 @@ def calculateLivingMetricScore(G, roadBetweenness, lambda_=10):
         scores[road] = score
 
     return np.mean(list(scores.values()))
+
+
+
+def getRoadRanks(roadBetweenness):
+    sorted_roads = sorted(roadBetweenness.items(),
+                           key=lambda x: x[1])
+    return {road: rank for rank, (road, _) in enumerate(sorted_roads)}
+
+def calculateRoadConnectionDict(G):
+    roadConnectionDict = {}
+    for roadNumber in nx.get_edge_attributes(G, 'roadNumber').values():
+        roadConnectionDict[roadNumber] = []
+    for node in G.nodes():
+        connectedRoads = set()
+        for edge in G.edges(node, data=True):
+            if 'roadNumber' in edge[2]:
+                connectedRoads.add(edge[2]['roadNumber'])
+        for roadNumber in connectedRoads:
+            # Exclude the road itself from its list of connected roads
+            roadConnectionDict[roadNumber].extend([connectedRoad for connectedRoad in connectedRoads if connectedRoad != roadNumber])
+    return roadConnectionDict
 
 
 def calculateLivingMetricScoreNormalised(
@@ -303,6 +310,18 @@ def calculateLivingMetricScoreNormalised(
         scores[road] = s / len(neighbours)  # degree-normalised
 
     return np.mean(list(scores.values()))
+
+def calculateLivingMetricScoreNormalisedFromFile(
+    G, betweennessLoadPath, lambda_=1.0
+):
+
+    if not os.path.exists(betweennessLoadPath):
+        raise FileNotFoundError(f"Betweenness file not found: {betweennessLoadPath}")
+    
+    with open(betweennessLoadPath, 'rb') as f:
+        roadBetweenness = pickle.load(f)
+    
+    return calculateLivingMetricScoreNormalised(G, roadBetweenness, lambda_=lambda_)
 
 def calculateAverageCircuity(G,shortestPathsLoadPath=None):
     #average circuity is defined as the mean of all circuity values for each pair of nodes in the graph.
